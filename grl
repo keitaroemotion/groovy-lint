@@ -25,6 +25,64 @@ file_contents    = [[x, read(x).split('\n')] for x in files if x != '']
 diff_contents    = ([x for x in diffs if x != '' and x.startswith('+') and not x.startswith('++')])
 allfile_contents = '\n'.join([read(x) for x in allfiles if x != ''])
 
+def remove_space_dup(x):
+    x = x.replace('  ', ' ')
+    if('  ' in x):
+        return remove_space_dup(x)
+    return x
+
+file_contents_per_method = []
+funcs = []
+func_conts = []
+
+#
+# because of dirty code, this code section could not be prefect:
+# need modification and maintenance later.
+#
+for path, content in file_contents:
+    func_partial = ''
+    func_cont = ''
+    for line in content:
+        line = remove_space_dup(line)
+        if('=') in func_partial:
+            funcs.append([func_partial, func_cont, path])
+            func_partial = ''
+            func_cont = ''
+
+        if (func_partial != ''):
+            func_partial += line
+            if(')' in func_partial):
+                funcs.append([func_partial, func_cont, path])
+                func_partial = ''
+                func_cont = ''
+        elif (re.search("def\s+[^\s]+\(", line)):
+            funcs.append([line, func_cont, path])
+            func_cont = ''
+        elif (re.search("def\s+[^\s]+", line)):
+            func_partial += line
+
+        func_cont += line
+
+#
+# because of dirty code, this code section could not be prefect:
+# need modification and maintenance later.
+#
+for line, cont, path in funcs:
+    if('(' in line and '{' in line):
+        name_args = line.split('(')
+        name = name_args[0]
+        args = name_args[1]
+        name = [x for x in name.split(' ') if x not in ['private', 'static', 'def'] and x != ''][0]
+        args = [x.strip() for x in args.replace(')', '').replace('{', '').split(',')]
+        args = [x.split('=')[0].strip().split(' ') for x in args]
+        args = [x[1] for x in args if len(x) > 1]
+        if(len(args) > 0):
+            for arg in args:
+                if not (re.search(f"[\s\(\)\[\]]+{arg}[\s\(\)\[\]]+", cont)):
+                    print("{} | '{}' might not be in {}: \n\n{}\n\n".format(os.path.basename(path), arg, name, cont))
+                    import sys
+                    sys.exit()
+
 file_content_str = ['\n'.join(x[1]) for x in file_contents]
 
 def warn(path, i, msg, line):
