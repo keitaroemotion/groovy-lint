@@ -22,7 +22,7 @@ file_contents = [[x, read(x).split('\n')] for x in files if x != '']
 diff_contents = ([x for x in diffs if x != '' and x.startswith('+') and not x.startswith('++')])
 
 for path, content in file_contents:
-    i = 0
+    i = 1 
     for line in content:
         if("print" in line):
             print('{}:{} println detected: {}'.format(path, i, line))
